@@ -40,8 +40,24 @@ installAcme () {
   return 0
 }
 
-generateCrt () {
-  echo 'begin generateCrt'
+generateRSACrt () {
+  echo 'begin generateRSACrt'
+  cd ${BASE_ROOT}
+  source config
+  echo 'begin updating default cert by acme.sh tool'
+  source ${ACME_BIN_PATH}/acme.sh.env
+  ${ACME_BIN_PATH}/acme.sh --issue --dns ${DNS} --dnssleep ${DNS_SLEEP} -d "${DOMAIN}" -d "*.${DOMAIN}"
+  ${ACME_BIN_PATH}/acme.sh --installcert -d ${DOMAIN} \
+    --certpath ${CRT_PATH}/cert.pem \
+    --key-file ${CRT_PATH}/privkey.pem \
+    --fullchain-file ${CRT_PATH}/fullchain.pem
+  cd -
+  echo 'done generateRSACrt'
+  return 0
+}
+
+generateECCCrt () {
+  echo 'begin generateECCCrt'
   cd ${BASE_ROOT}
   source config
   echo 'begin updating default cert by acme.sh tool'
@@ -86,20 +102,35 @@ revertCrt () {
   echo 'done revertCrt'
 }
 
-updateCrt () {
-  echo '------ begin updateCrt ------'
+updateRSACrt () {
+  echo '------ begin updateRSACrt ------'
   backupCrt
   installAcme
-  generateCrt
+  generateRSACrt
   updateService
   reloadWebService
-  echo '------ end updateCrt ------'
+  echo '------ end updateRSACrt ------'
+}
+
+updateECCCrt () {
+  echo '------ begin updateECCCrt ------'
+  backupCrt
+  installAcme
+  generateECCCrt
+  updateService
+  reloadWebService
+  echo '------ end updateECCCrt ------'
 }
 
 case "$1" in
-  update)
-    echo "begin update cert"
-    updateCrt
+  updateRSA)
+    echo "begin update RSAcert"
+    updateRSACrt
+    ;;
+
+  updateECC)
+    echo "begin update ECCcert"
+    updateECCCrt
     ;;
 
   revert)
@@ -108,6 +139,6 @@ case "$1" in
       ;;
 
     *)
-        echo "Usage: $0 {update|revert}"
+        echo "Usage: $0 {updateRSA|updateECC|revert}"
         exit 1
 esac
